@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import rasterio
 from rasterio.enums import Resampling
-import json
+import geojson 
 import tifffile
 from datetime import datetime
 import argparse  # добавляем библиотеку argparse для работы с аргументами командной строки
@@ -41,7 +41,7 @@ def process_image(image, georeferenced_image, geotransform, filename):
 def find_homography(image1, image2):
     print(f"Processing images with shapes {image1.shape} and {image2.shape}")
 
-    orb = cv2.ORB_create(nfeatures=1000)
+    orb = cv2.ORB_create(nfeatures=2000)
 
     try:
         keypoints1, descriptors1 = orb.detectAndCompute(image1, None)
@@ -58,9 +58,9 @@ def find_homography(image1, image2):
         print("Descriptors are None. Unable to perform matching.")
         return None
 
-    good_matches = sorted(matches, key=lambda x: x.distance)[:100]
+    good_matches = sorted(matches, key=lambda x: x.distance)[:80]
 
-    if len(good_matches) < 10:
+    if len(good_matches) < 4:
         print(f"Not enough good matches: {len(good_matches)}")
         return None
 
@@ -88,22 +88,36 @@ def save_geojson(corner_coords, layout_name, crop_name, geotransform, start_time
     crs = f"EPSG:{crs_epsg}"
 
     geojson_data = {
-        "layout_name": layout_name,
-        "crop_name": crop_name,
-        "ul": {"x": corner_coords[0][0], "y": corner_coords[0][1]},
-        "ur": {"x": corner_coords[1][0], "y": corner_coords[1][1]},
-        "br": {"x": corner_coords[2][0], "y": corner_coords[2][1]},
-        "bl": {"x": corner_coords[3][0], "y": corner_coords[3][1]},
-        "crs": crs,
-        "start": start_time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "end": end_time.strftime("%Y-%m-%dT%H:%M:%S")
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "layout_name": layout_name,
+                    "crop_name": crop_name,
+                    "start": start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    "end": end_time.strftime("%Y-%m-%dT%H:%M:%S")
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [corner_coords[0][0], corner_coords[0][1]],
+                        [corner_coords[1][0], corner_coords[1][1]],
+                        [corner_coords[2][0], corner_coords[2][1]],
+                        [corner_coords[3][0], corner_coords[3][1]],
+                        [corner_coords[0][0], corner_coords[0][1]]
+                    ]]
+                }
+            }
+        ]
     }
 
-    geojson_filename = f"{crop_name}_to_{layout_name}_geojson.json"
+    geojson_filename = f"{crop_name}_to_{layout_name}_geojson.geojson"
     with open(geojson_filename, 'w') as geojson_file:
-        json.dump(geojson_data, geojson_file, indent=4)
+        geojson.dump(geojson_data, geojson_file, indent=2)
 
     print(f"GeoJSON с координатами углов сохранен в файле: {geojson_filename}")
+
 
 def save_geotiff(image, geotransform, crop_name):
     tiff_filename = f"{crop_name}_aligned.tif"
