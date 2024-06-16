@@ -64,10 +64,6 @@ def main(input_file, output_file, report_file):
     print(f"Создан отчет: {report_file}")
 
 if __name__ == "__main__":
-    # input_file = "C:/Users/Костя/Desktop/HOHOTON/source/1_20/crop_2_0_0000.tif"
-    # output_file = "C:/Users/Костя/Desktop/HOHOTON/restored.tif"
-    # report_file = "C:/Users/Костя/Desktop/HOHOTON/report.txt"
-    # main(input_file, output_file, report_file)
     parser = argparse.ArgumentParser(description='Исправление битых пикселей на изображении')
     parser.add_argument('input_file', type=str, help='Путь к входному файлу изображения')
     parser.add_argument('output_file', type=str, help='Путь для сохранения исправленного изображения')
