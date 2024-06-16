@@ -1,3 +1,4 @@
+
 import os
 import cv2
 import numpy as np
@@ -6,6 +7,7 @@ from rasterio.enums import Resampling
 import json
 import tifffile
 from datetime import datetime
+import argparse  # добавляем библиотеку argparse для работы с аргументами командной строки
 
 def load_image(file_path):
     try:
@@ -39,7 +41,7 @@ def process_image(image, georeferenced_image, geotransform, filename):
 def find_homography(image1, image2):
     print(f"Processing images with shapes {image1.shape} and {image2.shape}")
 
-    orb = cv2.ORB_create(nfeatures=5000)
+    orb = cv2.ORB_create(nfeatures=1000)
 
     try:
         keypoints1, descriptors1 = orb.detectAndCompute(image1, None)
@@ -135,8 +137,19 @@ def save_geotiff(image, geotransform, crop_name):
     print(f"Привязанный снимок сохранен в GeoTIFF файле: {tiff_filename}")
 
 if __name__ == '__main__':
-    satellite_image_path = 'C:/Users/Костя/Desktop/HOHOTON/source/1_20/crop_1_2_0000.tif'  # Путь к конкретному снимку
-    georeferenced_image_path = 'C:/Users/Костя/Desktop/HOHOTON/source/layouts/layout_2021-08-16.tif'
+    # Парсинг аргументов командной строки
+    parser = argparse.ArgumentParser(description='Process images with georeferencing')
+    parser.add_argument('--crop_name', type=str, help='Path to crop image')
+    parser.add_argument('--layout_name', type=str, help='Path to layout image')
+    args = parser.parse_args()
+
+    # Проверка наличия аргументов
+    if args.crop_name is None or args.layout_name is None:
+        parser.print_help()
+        exit(1)
+
+    satellite_image_path = args.crop_name
+    georeferenced_image_path = args.layout_name
 
     layout_name = os.path.basename(georeferenced_image_path)
     crop_name = os.path.basename(satellite_image_path)
@@ -157,3 +170,4 @@ if __name__ == '__main__':
         end_time = datetime.now()
         save_geojson(corner_coords, layout_name, crop_name, geotransform, start_time, end_time)
         save_geotiff(image, geotransform, crop_name)
+    
